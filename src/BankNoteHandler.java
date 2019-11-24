@@ -3,52 +3,42 @@ import java.util.Map;
 public class BankNoteHandler {
     private BankNoteHandler nextBankNoteHandler;
     private int bankNoteNominal;
-    private int currentCount;
+    private int realbankNoteCount;
 
-    BankNoteHandler(BankNoteHandler nextBankNoteHandler, int bankNoteNominal, int currentCount) {
+    BankNoteHandler(BankNoteHandler nextBankNoteHandler, int bankNoteNominal, int realbankNoteCount) {
         this.nextBankNoteHandler = nextBankNoteHandler;
         this.bankNoteNominal = bankNoteNominal;
-        this.currentCount = currentCount;
+        this.realbankNoteCount = realbankNoteCount;
     }
 
     public Map<Integer, Integer> getBankNoteCount(int money, Map<Integer, Integer> storage) {
-        if (money <= 0) {
-            throw new RuntimeException("Введенная сумма не может быть 0 или отрицательным числом");
-        }
-        int count = money / bankNoteNominal;
-        int maxAvaliableMoney = bankNoteNominal * currentCount;
-        if (nextBankNoteHandler != null) {
-            if (money % bankNoteNominal == 0) {
-                if (count > currentCount) {
-                    storage.put(bankNoteNominal, count);
-                }
-                else {
-                    storage.put(bankNoteNominal, currentCount);
-                    int remains = money - maxAvaliableMoney;
-                    nextBankNoteHandler.getBankNoteCount(remains, storage);
-                }
-            } else if (money > bankNoteNominal) {
-                if (count > currentCount) {
-                    storage.put(bankNoteNominal, currentCount);
-                }
-                else {
-                    storage.put(bankNoteNominal, count);
-                }
-                int remains = money - maxAvaliableMoney;
-                nextBankNoteHandler.getBankNoteCount(remains, storage);
+        int maxAvaliableMoney = bankNoteNominal * realbankNoteCount;
+        int bankNoteCount = money / bankNoteNominal;
+        if (bankNoteCount == 0) {
+            if (nextBankNoteHandler == null) {
+                throw new RuntimeException("Сумма должна быть кратна " + bankNoteNominal);
             } else {
                 nextBankNoteHandler.getBankNoteCount(money, storage);
             }
-        } else {
-            if (money % bankNoteNominal == 0) {
-                if (count > currentCount) {
-                    throw new RuntimeException("Недостаточно купюр для выдачи. Купюра: " + bankNoteNominal + " Требуется: " + count + " Доступно " + currentCount);
-                }
-                else {
-                    storage.put(bankNoteNominal, count);
-                }
+        }
+        if (maxAvaliableMoney < money) {
+            storage.put(bankNoteNominal, realbankNoteCount);
+            if (nextBankNoteHandler != null) {
+                nextBankNoteHandler.getBankNoteCount(money - maxAvaliableMoney, storage);
             } else {
-                throw new RuntimeException("Не возможно обработать часть суммы " + money + " - минимальная доступная банкнота - " + bankNoteNominal);
+                throw new RuntimeException("Недостаточно наличных для выдачи");
+            }
+        } else {
+            final int remains = money % bankNoteNominal;
+            if (bankNoteCount >= 1) {
+                storage.put(bankNoteNominal, bankNoteCount);
+            }
+            if (nextBankNoteHandler != null) {
+                nextBankNoteHandler.getBankNoteCount(remains, storage);
+            } else {
+                if (remains != 0) {
+                    throw new RuntimeException("Сумма должна быть кратна " + bankNoteNominal);
+                }
             }
         }
         return storage;
